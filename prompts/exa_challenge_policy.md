@@ -21,15 +21,10 @@ Return one of:
    - Cloudflare: `cf-mitigated: challenge`.
    - AWS WAF: `x-amzn-waf-action: challenge|captcha`.
    - DataDome indicators such as `X-DataDome*`, `X-DD-B`, or a `datadome` session cookie when exposed.
-2. Check known public widget/page markers:
-   - Google reCAPTCHA.
-   - hCaptcha.
-   - Cloudflare Turnstile.
-   - DataDome challenge/block/device-check pages.
-   - HUMAN / PerimeterX Human Challenge.
-   - Akamai Bot Manager challenge pages when identifiable.
-   - Imperva / Incapsula challenge or block pages.
-3. Check generic human-verification text and unexpected HTML where a non-HTML resource was expected.
+2. Check page-wide challenge/block indicators from DataDome, HUMAN / PerimeterX, Akamai, Imperva, or generic human-verification text.
+3. Treat Google reCAPTCHA, hCaptcha, and Cloudflare Turnstile widget markers as **contextual**:
+   - an embedded widget on an otherwise ordinary HTTP 200 article/contact page is not by itself a reason to stop;
+   - stop when the widget is the access gate, accompanies denial/challenge status, replaces expected content, or appears with human-verification language.
 4. Check HTTP access/rate signals:
    - `429`: BACKOFF.
    - `401` or `403`: STOP_MANUAL unless clearly explained by a harmless expected subrequest.
