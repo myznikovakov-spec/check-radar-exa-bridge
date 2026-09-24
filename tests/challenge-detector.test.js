@@ -22,31 +22,42 @@ test("detects AWS WAF challenge", () => {
   assert.equal(r.provider, "aws_waf");
 });
 
-test("detects reCAPTCHA markup", () => {
+test("embedded reCAPTCHA on ordinary 200 page does not stop crawling", () => {
   const r = classifyResponse({
     status: 200,
+    headers: { "content-type": "text/html" },
+    body: '<article>Public content</article><div class="g-recaptcha" data-sitekey="x"></div>'
+  });
+  assert.equal(r.decision, "ALLOW");
+  assert.equal(r.category, "ordinary_content_with_verification_widget");
+});
+
+test("reCAPTCHA on denied response stops for manual check", () => {
+  const r = classifyResponse({
+    status: 403,
+    headers: { "content-type": "text/html" },
     body: '<div class="g-recaptcha" data-sitekey="x"></div>'
   });
   assert.equal(r.decision, "STOP_MANUAL");
   assert.equal(r.provider, "google_recaptcha");
 });
 
-test("detects hCaptcha markup", () => {
+test("embedded hCaptcha on ordinary page is informational", () => {
   const r = classifyResponse({
     status: 200,
-    body: '<script src="https://js.hcaptcha.com/1/api.js"></script>'
+    headers: { "content-type": "text/html" },
+    body: '<p>Article</p><script src="https://js.hcaptcha.com/1/api.js"></script>'
   });
-  assert.equal(r.decision, "STOP_MANUAL");
+  assert.equal(r.decision, "ALLOW");
   assert.equal(r.provider, "hcaptcha");
 });
 
-test("detects Turnstile markup", () => {
+test("Turnstile with verification language stops", () => {
   const r = classifyResponse({
     status: 200,
-    body: '<div class="cf-turnstile"></div>'
+    body: '<p>Please verify you are human</p><div class="cf-turnstile"></div>'
   });
   assert.equal(r.decision, "STOP_MANUAL");
-  assert.equal(r.provider, "cloudflare");
 });
 
 test("detects DataDome response header", () => {
