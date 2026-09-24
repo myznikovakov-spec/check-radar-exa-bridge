@@ -89,7 +89,6 @@ function classifyResponse(input = {}) {
     });
   }
 
-  // Strong header signals first.
   if ((headers["cf-mitigated"] || "").toLowerCase() === "challenge") {
     return result({
       decision: "STOP_MANUAL",
@@ -134,7 +133,6 @@ function classifyResponse(input = {}) {
     });
   }
 
-  // Page-wide challenge/block markers that are strong enough by themselves.
   const strongMarkers = [
     {
       provider: "datadome",
@@ -160,6 +158,21 @@ function classifyResponse(input = {}) {
       provider: "imperva",
       category: "waf_or_bot_management",
       needles: ["incapsula incident id", "req_challenged", "imperva captcha", "imperva challenge"]
+    },
+    {
+      provider: "f5_bot_defense",
+      category: "bot_management",
+      needles: ["f5 bot defense", "botdefense::action", "captcha_challenge", "browser_challenge"]
+    },
+    {
+      provider: "radware",
+      category: "bot_management",
+      needles: ["radware bot manager", "crypto challenge mitigation"]
+    },
+    {
+      provider: "kasada",
+      category: "bot_management",
+      needles: ["kasada bot defense", "kasada challenge"]
     }
   ];
 
@@ -178,7 +191,6 @@ function classifyResponse(input = {}) {
     }
   }
 
-  // Generic human-verification language.
   const genericHit = containsAny(body, [
     "verify you are human",
     "prove you are human",
@@ -202,8 +214,7 @@ function classifyResponse(input = {}) {
     });
   }
 
-  // Embedded CAPTCHA widgets are not automatically a blocker.
-  // A normal article/contact page may contain a widget unrelated to the requested content.
+  // Embedded challenge widgets are contextual: ordinary 200 content may contain them.
   const widgetMarkers = [
     {
       provider: "cloudflare",
@@ -236,6 +247,35 @@ function classifyResponse(input = {}) {
         "class='h-captcha'",
         "hcaptcha.render"
       ]
+    },
+    {
+      provider: "arkose",
+      category: "enforcement_challenge",
+      needles: [
+        "client-api.arkoselabs.com/v2/",
+        "-api.arkoselabs.com/v2/",
+        "iframe.arkoselabs.com",
+        "challenge-shown"
+      ]
+    },
+    {
+      provider: "friendly_captcha",
+      category: "captcha",
+      needles: [
+        "class=\"frc-captcha\"",
+        "class='frc-captcha'",
+        "@friendlycaptcha/sdk",
+        "friendly-challenge"
+      ]
+    },
+    {
+      provider: "geetest",
+      category: "captcha",
+      needles: [
+        "static.geetest.com/v4/gt4.js",
+        "static.geetest.com/static/js/gt.0.5.0.js",
+        "initgeetest("
+      ]
     }
   ];
 
@@ -248,7 +288,6 @@ function classifyResponse(input = {}) {
     }
   }
 
-  // An unexpected HTML interstitial is suspicious when an API/non-HTML resource was expected.
   if (
     input.expectedContentType &&
     !String(input.expectedContentType).toLowerCase().includes("html") &&
@@ -280,7 +319,6 @@ function classifyResponse(input = {}) {
     });
   }
 
-  // Access controls and rate limits.
   if (status === 429) {
     return result({
       decision: "BACKOFF",
@@ -308,7 +346,6 @@ function classifyResponse(input = {}) {
   }
 
   if (status === 401 || status === 403) {
-    // Cloudflare PAT subrequest 401 can be expected during a challenge flow.
     if (
       status === 401 &&
       url.includes("/cdn-cgi/challenge-platform/") &&
@@ -356,7 +393,6 @@ function classifyResponse(input = {}) {
     });
   }
 
-  // A widget embedded in otherwise normally served content is informational, not a block.
   if (widgetMatch) {
     return result({
       decision: "ALLOW",
