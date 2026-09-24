@@ -1,0 +1,65 @@
+{
+  "version": "1.0",
+  "purpose": "Detect common access checks and stop automation safely. No bypass logic.",
+  "default_action": "STOP_AND_MANUAL_REVIEW",
+  "rules": [
+    {
+      "id": "cloudflare_challenge",
+      "type": "anti_bot_challenge",
+      "match_any": [
+        "challenges.cloudflare.com",
+        "cf-turnstile",
+        "cf-turnstile-response",
+        "verify you are human",
+        "checking your browser"
+      ],
+      "action": "STOP_AND_MANUAL_REVIEW"
+    },
+    {
+      "id": "google_recaptcha",
+      "type": "captcha",
+      "match_any": [
+        "g-recaptcha",
+        "g-recaptcha-response",
+        "google.com/recaptcha",
+        "recaptcha/api.js"
+      ],
+      "action": "STOP_AND_MANUAL_REVIEW"
+    },
+    {
+      "id": "hcaptcha",
+      "type": "captcha",
+      "match_any": [
+        "h-captcha",
+        "h-captcha-response",
+        "js.hcaptcha.com",
+        "hcaptcha.com/1/api.js"
+      ],
+      "action": "STOP_AND_MANUAL_REVIEW"
+    },
+    {
+      "id": "http_403",
+      "type": "access_denied",
+      "status_codes": [
+        403
+      ],
+      "action": "STOP_AND_MANUAL_REVIEW"
+    },
+    {
+      "id": "http_429",
+      "type": "rate_limit",
+      "status_codes": [
+        429
+      ],
+      "action": "STOP_AND_BACKOFF"
+    },
+    {
+      "id": "http_503",
+      "type": "temporary_protection_or_unavailable",
+      "status_codes": [
+        503
+      ],
+      "action": "STOP_AND_BACKOFF"
+    }
+  ]
+}
