@@ -1,0 +1,235 @@
+{
+  "version": "2026-09-25",
+  "purpose": "Defensive detection of access barriers. Detect and stop; never bypass.",
+  "default_policy": {
+    "unknown_barrier": "STOP_MANUAL",
+    "captcha_or_challenge": "STOP_MANUAL",
+    "explicit_access_denial": "STOP_MANUAL",
+    "robots_disallow": "STOP_POLICY",
+    "rate_limit": "BACKOFF",
+    "repeated_challenge": "STOP_MANUAL",
+    "retry_rule": "Never loop on a challenged host. Honor Retry-After when present.",
+    "manual_session_guidance": "A human pass may be reused while the site keeps ordinary access. Do not force repeated verification; target no more than about one manual pass per 24h when sufficient."
+  },
+  "providers": [
+    {
+      "id": "cloudflare_challenge",
+      "category": "managed_challenge",
+      "confidence": "high",
+      "signals": {
+        "headers": [
+          {
+            "name": "cf-mitigated",
+            "equals": "challenge"
+          }
+        ],
+        "body_any": [
+          "challenges.cloudflare.com",
+          "checking your browser",
+          "verify you are human"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "cloudflare_turnstile",
+      "category": "captcha_or_widget",
+      "confidence": "high",
+      "signals": {
+        "body_any": [
+          "challenges.cloudflare.com/turnstile",
+          "cf-turnstile",
+          "cf-turnstile-response"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "google_recaptcha",
+      "category": "captcha",
+      "confidence": "high",
+      "signals": {
+        "body_any": [
+          "www.google.com/recaptcha/api.js",
+          "g-recaptcha",
+          "g-recaptcha-response",
+          "grecaptcha.render"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "hcaptcha",
+      "category": "captcha",
+      "confidence": "high",
+      "signals": {
+        "body_any": [
+          "js.hcaptcha.com/1/api.js",
+          "h-captcha",
+          "h-captcha-response",
+          "hcaptcha.render"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "aws_waf_challenge",
+      "category": "managed_challenge",
+      "confidence": "high",
+      "signals": {
+        "headers": [
+          {
+            "name": "x-amzn-waf-action",
+            "equals": "challenge"
+          }
+        ],
+        "status_any": [
+          202
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "aws_waf_captcha",
+      "category": "captcha",
+      "confidence": "high",
+      "signals": {
+        "headers": [
+          {
+            "name": "x-amzn-waf-action",
+            "equals": "captcha"
+          }
+        ],
+        "status_any": [
+          405
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "datadome",
+      "category": "bot_management",
+      "confidence": "high",
+      "signals": {
+        "headers_any": [
+          "x-datadome",
+          "x-datadomeresponse",
+          "x-dd-b",
+          "x-datadome-isbot"
+        ],
+        "cookies_any": [
+          "datadome="
+        ],
+        "body_any": [
+          "datadome",
+          "displaydatadomecaptchapage"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "human_perimeterx",
+      "category": "bot_management",
+      "confidence": "medium",
+      "signals": {
+        "body_any": [
+          "perimeterx human challenge",
+          "please verify you are a human",
+          "_pxappid",
+          "px-captcha",
+          "human challenge"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "akamai_bot_manager",
+      "category": "bot_management",
+      "confidence": "medium",
+      "signals": {
+        "body_any": [
+          "akamai bot manager",
+          "akamai challenge"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "imperva",
+      "category": "waf_or_bot_management",
+      "confidence": "medium",
+      "signals": {
+        "body_any": [
+          "imperva",
+          "incapsula",
+          "req_challenged",
+          "captcha challenge page"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    }
+  ],
+  "generic_rules": [
+    {
+      "id": "generic_human_verification",
+      "category": "human_verification",
+      "match": {
+        "body_any": [
+          "verify you are human",
+          "prove you are human",
+          "are you a robot",
+          "security check",
+          "browser verification",
+          "complete the security check",
+          "enable javascript and cookies to continue"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "http_429",
+      "category": "rate_limit",
+      "match": {
+        "status_any": [
+          429
+        ]
+      },
+      "action": "BACKOFF"
+    },
+    {
+      "id": "http_403_access_denied",
+      "category": "access_denied",
+      "match": {
+        "status_any": [
+          403
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "http_401_auth_required",
+      "category": "authentication_required",
+      "match": {
+        "status_any": [
+          401
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "login_or_paywall",
+      "category": "access_restriction",
+      "match": {
+        "body_any": [
+          "login required",
+          "sign in to continue",
+          "log in to continue",
+          "subscribe to continue",
+          "subscription required",
+          "paywall"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    }
+  ]
+}
