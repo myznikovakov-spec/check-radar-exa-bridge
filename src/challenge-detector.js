@@ -134,40 +134,8 @@ function classifyResponse(input = {}) {
     });
   }
 
-  // Strong public widget/page markers.
+  // Page-wide challenge/block markers that are strong enough by themselves.
   const strongMarkers = [
-    {
-      provider: "cloudflare",
-      category: "captcha_or_widget",
-      needles: [
-        "challenges.cloudflare.com/turnstile",
-        "cf-turnstile-response",
-        "class=\"cf-turnstile\"",
-        "class='cf-turnstile'"
-      ]
-    },
-    {
-      provider: "google_recaptcha",
-      category: "captcha",
-      needles: [
-        "www.google.com/recaptcha/api.js",
-        "g-recaptcha-response",
-        "class=\"g-recaptcha\"",
-        "class='g-recaptcha'",
-        "grecaptcha.render"
-      ]
-    },
-    {
-      provider: "hcaptcha",
-      category: "captcha",
-      needles: [
-        "js.hcaptcha.com/1/api.js",
-        "h-captcha-response",
-        "class=\"h-captcha\"",
-        "class='h-captcha'",
-        "hcaptcha.render"
-      ]
-    },
     {
       provider: "datadome",
       category: "bot_management",
@@ -218,7 +186,9 @@ function classifyResponse(input = {}) {
     "complete the security check",
     "browser verification",
     "checking your browser",
-    "enable javascript and cookies to continue"
+    "enable javascript and cookies to continue",
+    "just a moment...",
+    "attention required"
   ]);
   if (genericHit) {
     return result({
@@ -232,6 +202,52 @@ function classifyResponse(input = {}) {
     });
   }
 
+  // Embedded CAPTCHA widgets are not automatically a blocker.
+  // A normal article/contact page may contain a widget unrelated to the requested content.
+  const widgetMarkers = [
+    {
+      provider: "cloudflare",
+      category: "captcha_or_widget",
+      needles: [
+        "challenges.cloudflare.com/turnstile",
+        "cf-turnstile-response",
+        "class=\"cf-turnstile\"",
+        "class='cf-turnstile'"
+      ]
+    },
+    {
+      provider: "google_recaptcha",
+      category: "captcha",
+      needles: [
+        "www.google.com/recaptcha/api.js",
+        "g-recaptcha-response",
+        "class=\"g-recaptcha\"",
+        "class='g-recaptcha'",
+        "grecaptcha.render"
+      ]
+    },
+    {
+      provider: "hcaptcha",
+      category: "captcha",
+      needles: [
+        "js.hcaptcha.com/1/api.js",
+        "h-captcha-response",
+        "class=\"h-captcha\"",
+        "class='h-captcha'",
+        "hcaptcha.render"
+      ]
+    }
+  ];
+
+  let widgetMatch = null;
+  for (const marker of widgetMarkers) {
+    const hit = containsAny(body, marker.needles);
+    if (hit) {
+      widgetMatch = { ...marker, hit };
+      break;
+    }
+  }
+
   // An unexpected HTML interstitial is suspicious when an API/non-HTML resource was expected.
   if (
     input.expectedContentType &&
@@ -241,13 +257,25 @@ function classifyResponse(input = {}) {
   ) {
     return result({
       decision: "STOP_MANUAL",
-      provider: "unknown",
+      provider: widgetMatch?.provider || "unknown",
       category: "unexpected_interstitial",
       confidence: "medium",
       httpStatus: status,
       evidence: [
         `expected ${input.expectedContentType}, received text/html with status ${status}`
       ],
+      manualCheckRequired: true
+    });
+  }
+
+  if (widgetMatch && [202, 401, 403, 405, 429, 503].includes(status)) {
+    return result({
+      decision: "STOP_MANUAL",
+      provider: widgetMatch.provider,
+      category: widgetMatch.category,
+      confidence: "high",
+      httpStatus: status,
+      evidence: [`widget marker: ${widgetMatch.hit}`, `HTTP ${status}`],
       manualCheckRequired: true
     });
   }
@@ -325,6 +353,19 @@ function classifyResponse(input = {}) {
       httpStatus: status,
       evidence: [`body marker: ${wallHit}`],
       manualCheckRequired: true
+    });
+  }
+
+  // A widget embedded in otherwise normally served content is informational, not a block.
+  if (widgetMatch) {
+    return result({
+      decision: "ALLOW",
+      provider: widgetMatch.provider,
+      category: "ordinary_content_with_verification_widget",
+      confidence: "medium",
+      httpStatus: status,
+      evidence: [`embedded widget marker: ${widgetMatch.hit}`],
+      manualCheckRequired: false
     });
   }
 
