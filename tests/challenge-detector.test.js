@@ -60,6 +60,36 @@ test("Turnstile with verification language stops", () => {
   assert.equal(r.decision, "STOP_MANUAL");
 });
 
+test("Arkose script on ordinary 200 page is contextual", () => {
+  const r = classifyResponse({
+    status: 200,
+    headers: { "content-type": "text/html" },
+    body: '<p>Public page</p><script src="https://client-api.arkoselabs.com/v2/key/api.js"></script>'
+  });
+  assert.equal(r.decision, "ALLOW");
+  assert.equal(r.provider, "arkose");
+});
+
+test("Friendly Captcha widget on ordinary page is contextual", () => {
+  const r = classifyResponse({
+    status: 200,
+    headers: { "content-type": "text/html" },
+    body: '<p>Public page</p><div class="frc-captcha"></div>'
+  });
+  assert.equal(r.decision, "ALLOW");
+  assert.equal(r.provider, "friendly_captcha");
+});
+
+test("GeeTest widget on denied response requires manual check", () => {
+  const r = classifyResponse({
+    status: 403,
+    headers: { "content-type": "text/html" },
+    body: '<script src="https://static.geetest.com/v4/gt4.js"></script>'
+  });
+  assert.equal(r.decision, "STOP_MANUAL");
+  assert.equal(r.provider, "geetest");
+});
+
 test("detects DataDome response header", () => {
   const r = classifyResponse({
     status: 403,
