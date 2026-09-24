@@ -1,7 +1,7 @@
 {
-  "version": "2026-09-25",
+  "version": "2026-09-25.2",
   "purpose": "Defensive detection of access barriers. Detect and stop; never bypass.",
-  "matching_note": "Explicit challenge headers and page-wide challenge signals are strong blockers. Embedded CAPTCHA widgets on otherwise ordinary HTTP 200 content are informational unless the requested content itself is gated.",
+  "matching_note": "Explicit challenge headers and page-wide challenge signals are strong blockers. Embedded CAPTCHA/challenge widgets on otherwise ordinary HTTP 200 content are informational unless the requested content itself is gated.",
   "default_policy": {
     "unknown_barrier": "STOP_MANUAL",
     "captcha_or_challenge": "STOP_MANUAL",
@@ -66,6 +66,49 @@
           "h-captcha",
           "h-captcha-response",
           "hcaptcha.render"
+        ]
+      },
+      "action_when_gating": "STOP_MANUAL",
+      "action_when_embedded_only": "ALLOW"
+    },
+    {
+      "id": "arkose",
+      "category": "enforcement_challenge",
+      "confidence": "high",
+      "widget_signals": {
+        "body_any": [
+          "client-api.arkoselabs.com/v2/",
+          "-api.arkoselabs.com/v2/",
+          "iframe.arkoselabs.com",
+          "challenge-shown"
+        ]
+      },
+      "action_when_gating": "STOP_MANUAL",
+      "action_when_embedded_only": "ALLOW"
+    },
+    {
+      "id": "friendly_captcha",
+      "category": "captcha",
+      "confidence": "high",
+      "widget_signals": {
+        "body_any": [
+          "frc-captcha",
+          "@friendlycaptcha/sdk",
+          "friendly-challenge"
+        ]
+      },
+      "action_when_gating": "STOP_MANUAL",
+      "action_when_embedded_only": "ALLOW"
+    },
+    {
+      "id": "geetest",
+      "category": "captcha",
+      "confidence": "high",
+      "widget_signals": {
+        "body_any": [
+          "static.geetest.com/v4/gt4.js",
+          "static.geetest.com/static/js/gt.0.5.0.js",
+          "initGeetest"
         ]
       },
       "action_when_gating": "STOP_MANUAL",
@@ -166,6 +209,45 @@
           "captcha challenge page"
         ]
       },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "f5_bot_defense",
+      "category": "bot_management",
+      "confidence": "medium",
+      "blocker_signals": {
+        "body_any": [
+          "f5 bot defense",
+          "botdefense::action",
+          "captcha_challenge",
+          "browser_challenge"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "radware",
+      "category": "bot_management",
+      "confidence": "medium",
+      "blocker_signals": {
+        "body_any": [
+          "radware bot manager",
+          "crypto challenge mitigation"
+        ]
+      },
+      "action": "STOP_MANUAL"
+    },
+    {
+      "id": "kasada",
+      "category": "bot_management",
+      "confidence": "low",
+      "blocker_signals": {
+        "body_any": [
+          "kasada bot defense",
+          "kasada challenge"
+        ]
+      },
+      "note": "Kasada publicly describes hidden challenges but does not expose a stable public marker suitable for confident signature matching.",
       "action": "STOP_MANUAL"
     }
   ],
