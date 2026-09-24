@@ -8,6 +8,16 @@ This repository contains only public-safe detection rules and handling policy fo
 
 It must not contain private Check Radar data, API keys, tokens, credentials, internal databases, or sensitive business logic.
 
+## Canonical rules
+
+For runtime decisions, use only these canonical files:
+
+- `config/challenge-signatures.json`
+- `prompts/exa_challenge_policy.md`
+- `src/challenge-detector.js`
+
+Other policy/signature files that may appear in the repository are informational or legacy unless explicitly promoted here. This prevents duplicate or older rules from overriding the canonical detector.
+
 ## Core safety behavior
 
 When a source returns a CAPTCHA, anti-bot challenge, managed challenge, repeated access denial, or another uncertain verification barrier:
@@ -27,6 +37,6 @@ When a source returns a CAPTCHA, anti-bot challenge, managed challenge, repeated
 - `prompts/exa_challenge_policy.md` — Exa-facing handling instructions.
 - `docs/public_sources.md` — public documentation used to build the signatures.
 - `src/challenge-detector.js` — dependency-free response classifier.
-- `tests/challenge-detector.test.js` — basic regression tests.
+- `tests/challenge-detector.test.js` — regression tests.
 
 This bridge is designed to detect and stop on access controls, not to defeat them.
